@@ -4,7 +4,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 # Create your views here.
-
+from api.models import Todo
+from api.serializers import TodoSerializer
 
 @api_view(['GET'])
 def api_overview(request):
@@ -16,3 +17,10 @@ def api_overview(request):
         'delete': '/task/delete/<str:pk>/',
     }
     return Response(urls_list)
+
+
+@api_view(['GET'])
+def todo_list(request):
+    todos = Todo.objects.all()
+    serializers = TodoSerializer(todos, many=True)
+    return Response(serializers.data)
