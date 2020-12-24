@@ -2,56 +2,57 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import generics
+from rest_framework import mixins
 
 # Create your views here.
+from rest_framework.views import APIView
+from rest_framework import status
 from api.models import Todo
 from api.serializers import TodoSerializer
 
-@api_view(['GET'])
-def api_overview(request):
-    urls_list = {
-        'list': '/task-list/',
-        'details_view': '/task-detail/<task_id>/',
-        'create': '/task-create',
-        'update': '/task-update/<task_id>',
-        'delete': '/task-delete/<task_id>/',
-    }
-    return Response(urls_list)
+
+class ApiRoot(APIView):
+    def get(self, request):
+        urls_list = {
+            'task-list': 'tasks/',
+        }
+        return Response(urls_list, status=status.HTTP_200_OK)
 
 
-@api_view(['GET'])
-def todo_list(request):
-    todos = Todo.objects.all()
-    serializers = TodoSerializer(todos, many=True)
-    return Response(serializers.data)
+class TaskList(generics.GenericAPIView, mixins.ListModelMixin, mixins.CreateModelMixin):
+    serializer_class = TodoSerializer
+    queryset = Todo.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, *kwargs)
 
 
-@api_view(['GET'])
-def todo_details(request, task_id):
-    todo = Todo.objects.get(pk=task_id)
-    serializers = TodoSerializer(todo, many=False)
-    return Response(serializers.data)
+class TaskDetails(mixins.RetrieveModelMixin,
+                  mixins.UpdateModelMixin, mixins.DestroyModelMixin,
+                  generics.GenericAPIView):
+    serializer_class = TodoSerializer
+    queryset = Todo.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 
 
-@api_view(['POST'])
-def create_todo(request):
-    serializers = TodoSerializer(data=request.data)
-    if serializers.is_valid():
-        serializers.save()
-    return Response(serializers.data)
-
-
-@api_view(['POST'])
-def update_todo(request, task_id):
-    todo = Todo.objects.get(pk=task_id)
-    serializers = TodoSerializer(instance=todo, data=request.data)
-    if serializers.is_valid():
-        serializers.save()
-    return Response(serializers.data)
-
-
-@api_view(['DELETE'])
-def delete_todo(request, task_id):
-    todo = Todo.objects.get(pk=task_id)
-    todo.delete()
-    return Response("Item Deleted Successfully. ")
+# Shorter Form
+# class TaskList(generics.ListCreateAPIView):
+#     queryset = Todo.objects.all()
+#     serializer_class = TodoSerializer
+#
+#
+# class TaskDetails(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Todo.objects.all()
+#     serializer_class = TodoSerializer
